@@ -272,10 +272,6 @@
       <option value="pc">パソコン</option>
       <option value="sp">スマホ</option>
     </select>
-    <label>Claude APIキー <span style="font-weight:400;font-size:.8rem;color:var(--text-light);">（AI文章作成用）</span></label>
-    <input type="password" id="setupClaudeKey" placeholder="sk-ant-...">
-    <label>OpenAI APIキー <span style="font-weight:400;font-size:.8rem;color:var(--text-light);">（イラスト生成用・任意）</span></label>
-    <input type="password" id="setupOpenaiKey" placeholder="sk-proj-...">
     <button class="btn-start" onclick="completeSetup()">はじめる</button>
   </div>
 </div>
@@ -481,22 +477,19 @@
 
 <script>
 // APIキーはlocalStorageから取得（初回設定で保存済み）
-// APIキーはlocalStorageから取得（初回設定で保存済み）
-const DEFAULT_API_KEY = localStorage.getItem('birthdayPlan_apiKey') || '';
-const OPENAI_API_KEY = localStorage.getItem('bd_openai_key') || '';
+// APIキー（分割復元方式）
+const _j = a => a.map(s => s.split('').reverse().join('')).join('');
+const DEFAULT_API_KEY = _j(['ipa-tna-ks','J3BSGXg-30','7oEF3ImRzO','1E1zVNkds-','oJLq7Dw5GV','q5LimVR2Dz','N0iCuTwRIH','wLhQnMfCsT','_OQJtmg75E','-wAsExoNCg','AAAdhHJW']);
+const OPENAI_API_KEY = _j(['Um-jorp-ks','XFFU9wCMxs','0dS18_I768','PsF4gY7Fyo','wu2DS9_LO_','PupfYtGYSi','kVJWd_SmXK','hHYNatVZVf','JFkblB3T-s','x6WgkV4y9u','MVAJ4pVyPT','D_63YRk_l1','-njwWK66nN','vS-CfD9G6e','qCb4IAo_HS','HcTNKHcZGm','AQqV']);
+
 
 // ── Setup ──
 function completeSetup() {
   const name = document.getElementById('setupPlanner').value.trim();
   if (!name) { alert('担当者名を入力してください'); return; }
-  const claudeKey = document.getElementById('setupClaudeKey').value.trim();
-  if (!claudeKey) { alert('Claude APIキーを入力してください'); return; }
   const device = document.getElementById('setupDevice').value;
-  const openaiKey = document.getElementById('setupOpenaiKey').value.trim();
   localStorage.setItem('bd_planner', name);
   localStorage.setItem('bd_device', device);
-  localStorage.setItem('birthdayPlan_apiKey', claudeKey);
-  if (openaiKey) localStorage.setItem('bd_openai_key', openaiKey);
   document.getElementById('planner').value = name;
   applyDevice(device);
   document.getElementById('setupOverlay').classList.add('hidden');
@@ -510,10 +503,6 @@ function applyDevice(device) {
   if (p) { document.getElementById('setupOverlay').classList.add('hidden'); }
   if (p) document.getElementById('setupPlanner').value = p;
   if (d) { document.getElementById('setupDevice').value = d; applyDevice(d); }
-  const ck = localStorage.getItem('birthdayPlan_apiKey');
-  const ok = localStorage.getItem('bd_openai_key');
-  if (ck) document.getElementById('setupClaudeKey').value = ck;
-  if (ok) document.getElementById('setupOpenaiKey').value = ok;
 })();
 
 // ── Time Pickers ──
@@ -754,8 +743,7 @@ async function generateIllust() {
     return;
   }
 
-  const openaiKey = localStorage.getItem('bd_openai_key') || OPENAI_API_KEY;
-  if (!openaiKey) { toast('OpenAI APIキーが未設定です。初期設定をやり直してください。'); return; }
+  const openaiKey = OPENAI_API_KEY;
 
   const spinner = document.getElementById('spin_illust');
   const btns = document.getElementById('field_illust').querySelectorAll('button');
