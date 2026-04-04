@@ -172,17 +172,18 @@
   /* Modal */
   .modal-overlay {
     display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5);
-    z-index: 200; justify-content: center; align-items: flex-start; padding: 20px; overflow-y: auto;
+    z-index: 200; justify-content: center; align-items: flex-start; padding: 10px; overflow-y: auto;
   }
   .modal-overlay.show { display: flex; }
-  .modal { background: #fff; border-radius: 14px; max-width: 800px; width: 100%; margin: 20px auto; overflow: hidden; }
+  .modal { background: #fff; border-radius: 14px; max-width: 800px; width: 100%; margin: 10px auto; overflow: hidden; box-sizing: border-box; }
   .modal-header {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 16px 24px; background: var(--primary); color: #fff;
+    padding: 12px 16px; background: var(--primary); color: #fff;
   }
   .modal-header h2 { font-size: 1.1rem; }
   .modal-close { background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; }
-  .modal-body { padding: 12px 24px; }
+  .modal-body { padding: 12px 16px; overflow-x: hidden; word-break: break-word; }
+  .modal-body * { max-width: 100%; box-sizing: border-box; }
   .modal-actions {
     padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end;
   }
@@ -196,7 +197,8 @@
   .print-doc .subtitle { text-align: center; font-size: .78rem; color: var(--text-light); margin: 0 0 8px; padding: 0; }
   .print-doc .illust-print { text-align: center; margin: 0 0 10px; }
   .print-doc .illust-print svg, .print-doc .illust-print img { max-width: 400px; width: 400px; height: auto; border-radius: 6px; }
-  .print-doc table { width: 100%; border-collapse: collapse; margin-bottom: 12px; table-layout: auto; }
+  .print-doc { overflow-x: hidden; max-width: 100%; }
+  .print-doc table { width: 100%; border-collapse: collapse; margin-bottom: 12px; table-layout: fixed; word-wrap: break-word; overflow-wrap: break-word; }
   .print-doc th, .print-doc td {
     border: 1px solid #ccc; padding: 5px 10px; text-align: left; vertical-align: top; font-size: .83rem;
   }
@@ -243,6 +245,17 @@
   body.sp-mode .btn-ai { padding: 7px 12px; font-size: .78rem; }
   body.sp-mode .btn { padding: 12px 14px; font-size: .9rem; min-width: 0; }
   body.sp-mode .datetime-row { flex-wrap: wrap; }
+  /* SP: モーダル */
+  body.sp-mode .modal-overlay { padding: 5px; }
+  body.sp-mode .modal { margin: 5px auto; border-radius: 10px; }
+  body.sp-mode .modal-body { padding: 10px 10px; }
+  body.sp-mode .modal-header { padding: 10px 12px; }
+  body.sp-mode .print-doc { font-size: .8rem; }
+  body.sp-mode .print-doc h2 { font-size: 1rem; }
+  body.sp-mode .print-doc .event-subtitle { font-size: .9rem; }
+  body.sp-mode .print-doc .section-heading { font-size: .85rem; }
+  body.sp-mode .print-doc .text-block { font-size: .8rem; }
+  body.sp-mode .print-doc .illust-print img { max-width: 100%; width: 100%; }
   /* SP: 計画書テーブルを1列に */
   body.sp-mode .print-doc table { display: block; }
   body.sp-mode .print-doc tr { display: flex; flex-wrap: wrap; border-bottom: 1px solid #ccc; }
