@@ -1115,9 +1115,17 @@ async function savePdf() {
   }
 }
 
-function openTalknote() {
-  window.open('https://company.talknote.com/', '_blank');
-  toast('Talknoteが開きます。保存したPDFを添付してください');
+async function openTalknote() {
+  const text = document.getElementById('previewBody').innerText.replace(/^\n+/, '').replace(/\n{3,}/g, '\n\n').trim();
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('計画書をコピーしました。Talknoteに貼り付けてください');
+  } catch (e) {
+    toast('Talknoteが開きます');
+  }
+  setTimeout(() => {
+    window.open('https://company.talknote.com/', '_blank');
+  }, 500);
 }
 
 async function sharePdfFile() {
