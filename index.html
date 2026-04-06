@@ -166,7 +166,6 @@
   }
   .btn:active { transform: scale(.97); }
   .btn-preview { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: #fff; }
-  .btn-print { background: #555; color: #fff; }
   .btn-clear { background: #eee; color: #555; flex: 0; min-width: 100px; }
 
   /* Modal */
@@ -188,7 +187,9 @@
     padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end;
   }
   .modal-actions .btn { flex: 0; min-width: 140px; font-size: .9rem; padding: 10px 20px; }
-  .btn-copy-doc { background: var(--success); color: #fff; }
+  .btn-pdf-save { background: linear-gradient(135deg, #e87461, #c45847); color: #fff; flex: 1 !important; min-width: 200px !important; font-size: 1rem !important; padding: 14px 20px !important; }
+  .btn-pdf-share { background: linear-gradient(135deg, #34b7f1, #0088cc); color: #fff; flex: 1 !important; min-width: 200px !important; font-size: 1rem !important; padding: 14px 20px !important; }
+  .modal-actions { flex-wrap: wrap; }
 
   /* Print Doc */
   .print-doc { font-size: .85rem; }
@@ -281,6 +282,8 @@
   }
   .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -474,7 +477,6 @@
   <div class="section">
     <div class="actions">
       <button class="btn btn-preview" onclick="showPreview()">計画書をプレビュー</button>
-      <button class="btn btn-print" onclick="printDoc()">印刷 / PDF保存</button>
       <button class="btn btn-clear" onclick="clearAll()">リセット</button>
     </div>
   </div>
@@ -489,9 +491,9 @@
     </div>
     <div class="modal-body" id="previewBody"></div>
     <div class="modal-actions no-print">
-      <button class="btn btn-copy-doc" onclick="copyDoc()">計画書をコピー</button>
-      <button class="btn btn-print" onclick="printDoc()">印刷 / PDF保存</button>
-      <button class="btn btn-clear" onclick="document.getElementById('modalOverlay').classList.remove('show')">閉じる</button>
+      <button class="btn btn-pdf-save" id="btnPdfSave" onclick="savePdf()">PDFファイルで保存</button>
+      <button class="btn btn-pdf-share" id="btnPdfShare" onclick="sharePdf()" style="display:none;">このPDFを共有する</button>
+      <button class="btn btn-clear" onclick="closeAndResetPdf()">閉じる</button>
     </div>
   </div>
 </div>
@@ -634,33 +636,13 @@ const LABELS = {
 };
 
 const PROMPTS = {
-  schedule: `あなたは福祉施設の誕生日会計画書を作成する専門家です。
-以下の「当日の流れ」の下書きを、時系列が明確で読みやすい計画書向けの文章に洗練してください。
-箇条書きの時刻付きタイムスケジュール形式で、温かみのある表現にしてください。
-下書きの内容を尊重し、大幅な追加はせず、表現を整えることに集中してください。
-Markdownの記号（**、#、-など）は一切使わず、プレーンテキストで出力してください。箇条書きには「・」を使ってください。
-冒頭に項目名の見出し（例：【当日の流れ】など）は含めず、本文のみを出力してください。`,
+  schedule: `下書きを時刻付き箇条書きに整えて。まず自分が適切だと思う文章を考え、その3分の1の量に圧縮して出力すること。きれいな言葉選びをしつつ、短くシンプルなほど優れた文章。似た文脈の言葉は重複して使わない。1項目1行。内容の追加禁止。Markdown禁止、箇条書きは「・」、見出し不要。`,
 
-  reason: `あなたは福祉施設の誕生日会計画書を作成する専門家です。
-以下の「この企画にした理由」の下書きを、利用者様への想いが伝わる丁寧な文章に洗練してください。
-ご本人の好みや個性を大切にした理由が明確に伝わるようにしてください。
-下書きの内容を尊重し、大幅な追加はせず、表現を整えることに集中してください。
-Markdownの記号（**、#、-など）は一切使わず、プレーンテキストで出力してください。箇条書きには「・」を使ってください。
-冒頭に項目名の見出し（例：【当日の流れ】など）は含めず、本文のみを出力してください。`,
+  reason: `下書きを整えて。まず自分が適切だと思う文章を考え、その3分の1の量に圧縮して出力すること。きれいな言葉選びをしつつ、短くシンプルなほど優れた文章。似た文脈の言葉は重複して使わない。内容の追加禁止。Markdown禁止、箇条書きは「・」、見出し不要。`,
 
-  goal: `あなたは福祉施設の誕生日会計画書を作成する専門家です。
-以下の「ゴールのイメージ」の下書きを、具体的で温かみのある目標文に洗練してください。
-利用者様・ご家族・スタッフにとっての成功像が明確に伝わるようにしてください。
-下書きの内容を尊重し、大幅な追加はせず、表現を整えることに集中してください。
-Markdownの記号（**、#、-など）は一切使わず、プレーンテキストで出力してください。箇条書きには「・」を使ってください。
-冒頭に項目名の見出し（例：【当日の流れ】など）は含めず、本文のみを出力してください。`,
+  goal: `下書きを整えて。ゴールとは誕生日会の結果の理想の状態のみを書く。担当者の行動や計画は含めない。まず自分が適切だと思う文章を考え、その3分の1の量に圧縮して出力すること。きれいな言葉選びをしつつ、短くシンプルなほど優れた文章。似た文脈の言葉は重複して使わない。内容の追加禁止。Markdown禁止、箇条書きは「・」、見出し不要。`,
 
-  caution: `あなたは福祉施設の誕生日会計画書を作成する専門家です。
-以下の「注意すべき点とその対処方法」の下書きを、スタッフ全員が確認しやすい明確な注意事項と具体的な対処方法に洗練してください。
-注意点ごとに対処方法をセットで記載し、安全面・体調面・環境面に配慮した具体的な表現にしてください。
-下書きの内容を尊重し、大幅な追加はせず、表現を整えることに集中してください。
-Markdownの記号（**、#、-など）は一切使わず、プレーンテキストで出力してください。箇条書きには「・」を使ってください。
-冒頭に項目名の見出し（例：【当日の流れ】など）は含めず、本文のみを出力してください。`
+  caution: `下書きを箇条書きに整えて。注意点と対処をセットで。まず自分が適切だと思う文章を考え、その3分の1の量に圧縮して出力すること。きれいな言葉選びをしつつ、短くシンプルなほど優れた文章。似た文脈の言葉は重複して使わない。内容の追加禁止。Markdown禁止、箇条書きは「・」、見出し不要。`
 };
 
 const RETRY_INSTRUCTIONS = {
@@ -889,11 +871,10 @@ function gatherAllContext() {
 【注意すべき点】${caution}`;
 }
 
-const SUBTITLE_SYSTEM = `あなたは福祉施設の誕生日会のキャッチコピーを考える天才コピーライターです。
-以下の誕生日会計画の全情報を読み取り、この企画の魅力を凝縮した、スタッフや家族の心をぐっと掴むサブタイトルを1つだけ考えてください。
-短く（15文字〜30文字程度）、温かくて楽しい雰囲気が伝わるものにしてください。
-利用者さんの個性や企画の特徴が反映された、この誕生日会ならではのタイトルにしてください。
-「〜」や「！」を効果的に使い、読んだ人が参加したくなるタイトルにしてください。
+const SUBTITLE_SYSTEM = `あなたは福祉施設の誕生日会のサブタイトルを考える担当です。
+以下の誕生日会計画の情報を読み、この企画の特徴が伝わるサブタイトルを1つだけ考えてください。
+短く（15文字〜25文字程度）、自然で素朴な言葉遣いにしてください。
+利用者さんの個性や企画内容が反映されたものにしてください。
 タイトルのみを出力し、他の説明は不要です。`;
 
 async function generateSubtitle() {
@@ -1028,16 +1009,122 @@ function buildDoc() {
 </div>`;
 }
 
-function copyDoc() {
-  const text = document.getElementById('previewBody').innerText.replace(/^\n+/, '').replace(/\n{3,}/g, '\n\n').trim();
-  navigator.clipboard.writeText(text).then(() => toast('計画書をコピーしました'));
-}
+let lastPdfBlob = null;
+let lastPdfFileName = '';
+
 function showPreview() {
   document.getElementById('previewBody').innerHTML = buildDoc();
   document.getElementById('modalOverlay').classList.add('show');
+  // Reset PDF state
+  document.getElementById('btnPdfSave').style.display = '';
+  document.getElementById('btnPdfShare').style.display = 'none';
+  lastPdfBlob = null;
 }
-function closeModal(e) { if (e.target === e.currentTarget) document.getElementById('modalOverlay').classList.remove('show'); }
-function printDoc() { showPreview(); setTimeout(() => window.print(), 300); }
+function closeModal(e) { if (e.target === e.currentTarget) closeAndResetPdf(); }
+function closeAndResetPdf() {
+  document.getElementById('modalOverlay').classList.remove('show');
+  document.getElementById('btnPdfSave').style.display = '';
+  document.getElementById('btnPdfShare').style.display = 'none';
+  lastPdfBlob = null;
+}
+
+async function savePdf() {
+  const el = document.getElementById('previewBody');
+  const btn = document.getElementById('btnPdfSave');
+  btn.textContent = 'PDF作成中...';
+  btn.disabled = true;
+
+  const modal = document.querySelector('.modal');
+  const origMaxW = modal.style.maxWidth;
+  const origW = modal.style.width;
+  modal.style.maxWidth = '800px';
+  modal.style.width = '800px';
+
+  try {
+    const canvas = await html2canvas(el, {
+      scale: 2, useCORS: true, allowTaint: true,
+      backgroundColor: '#ffffff', width: el.scrollWidth, windowWidth: 800
+    });
+
+    modal.style.maxWidth = origMaxW;
+    modal.style.width = origW;
+
+    const { jsPDF } = window.jspdf;
+    const pdfWidth = 210, pdfHeight = 297;
+    const imgWidth = pdfWidth - 20;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageContentHeight = pdfHeight - 20;
+
+    if (imgHeight <= pageContentHeight) {
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 10, 10, imgWidth, imgHeight);
+    } else {
+      let srcY = 0, remainingHeight = imgHeight, page = 0;
+      while (remainingHeight > 0) {
+        if (page > 0) pdf.addPage();
+        const sliceHeight = Math.min(pageContentHeight, remainingHeight);
+        const sliceCanvasHeight = (sliceHeight / imgHeight) * canvas.height;
+        const sc = document.createElement('canvas');
+        sc.width = canvas.width; sc.height = sliceCanvasHeight;
+        const ctx = sc.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, sc.width, sc.height);
+        ctx.drawImage(canvas, 0, srcY, canvas.width, sliceCanvasHeight, 0, 0, canvas.width, sliceCanvasHeight);
+        pdf.addImage(sc.toDataURL('image/jpeg', 0.92), 'JPEG', 10, 10, imgWidth, sliceHeight);
+        srcY += sliceCanvasHeight;
+        remainingHeight -= sliceHeight;
+        page++;
+      }
+    }
+
+    const name = getVal('userName') || '計画書';
+    lastPdfFileName = `${name}さん誕生日会計画書.pdf`;
+    lastPdfBlob = pdf.output('blob');
+
+    // Download
+    const url = URL.createObjectURL(lastPdfBlob);
+    const a = document.createElement('a');
+    a.href = url; a.download = lastPdfFileName; a.click();
+    URL.revokeObjectURL(url);
+
+    toast('PDFを保存しました');
+
+    // Show share button, hide save button
+    btn.style.display = 'none';
+    const shareBtn = document.getElementById('btnPdfShare');
+    shareBtn.style.display = '';
+
+  } catch (e) {
+    modal.style.maxWidth = origMaxW;
+    modal.style.width = origW;
+    console.error(e);
+    toast('PDF作成に失敗しました');
+  } finally {
+    btn.textContent = 'PDFファイルで保存';
+    btn.disabled = false;
+  }
+}
+
+async function sharePdf() {
+  if (!lastPdfBlob) { toast('先にPDFを保存してください'); return; }
+  const file = new File([lastPdfBlob], lastPdfFileName, { type: 'application/pdf' });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: lastPdfFileName });
+      toast('共有しました');
+    } catch (e) {
+      if (e.name !== 'AbortError') toast('共有がキャンセルされました');
+    }
+  } else {
+    // Fallback: re-download
+    const url = URL.createObjectURL(lastPdfBlob);
+    const a = document.createElement('a');
+    a.href = url; a.download = lastPdfFileName; a.click();
+    URL.revokeObjectURL(url);
+    toast('共有非対応のため再ダウンロードしました');
+  }
+}
 function clearAll() {
   if (!confirm('すべての入力をリセットしますか？')) return;
   FIELDS.forEach(id => {
