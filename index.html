@@ -188,7 +188,9 @@
   }
   .modal-actions .btn { flex: 0; min-width: 140px; font-size: .9rem; padding: 10px 20px; }
   .btn-pdf-save { background: linear-gradient(135deg, #e87461, #c45847); color: #fff; flex: 1 !important; min-width: 200px !important; font-size: 1rem !important; padding: 14px 20px !important; }
-  .btn-pdf-share { background: linear-gradient(135deg, #34b7f1, #0088cc); color: #fff; flex: 1 !important; min-width: 200px !important; font-size: 1rem !important; padding: 14px 20px !important; }
+  .btn-pdf-share { background: linear-gradient(135deg, #34b7f1, #0088cc); color: #fff; flex: 1 !important; min-width: 120px !important; font-size: 1rem !important; padding: 14px 20px !important; }
+  .btn-pdf-gmail { background: linear-gradient(135deg, #ea4335, #c5221f); color: #fff; flex: 1 !important; min-width: 120px !important; font-size: 1rem !important; padding: 14px 20px !important; }
+  .btn-pdf-copy { background: linear-gradient(135deg, #34a853, #2d8f47); color: #fff; flex: 1 !important; min-width: 120px !important; font-size: 1rem !important; padding: 14px 20px !important; }
   .modal-actions { flex-wrap: wrap; }
 
   /* Print Doc */
@@ -492,7 +494,13 @@
     <div class="modal-body" id="previewBody"></div>
     <div class="modal-actions no-print">
       <button class="btn btn-pdf-save" id="btnPdfSave" onclick="savePdf()">PDFファイルで保存</button>
-      <button class="btn btn-pdf-share" id="btnPdfShare" onclick="sharePdf()" style="display:none;">このPDFを共有する</button>
+      <div id="pdfAfterActions" style="display:none; width:100%;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+          <button class="btn btn-pdf-share" onclick="sharePdf()">共有する</button>
+          <button class="btn btn-pdf-gmail" onclick="shareGmail()">Gmailで送る</button>
+          <button class="btn btn-pdf-copy" onclick="copyPdfText()">計画書をコピー</button>
+        </div>
+      </div>
       <button class="btn btn-clear" onclick="closeAndResetPdf()">閉じる</button>
     </div>
   </div>
@@ -1017,14 +1025,14 @@ function showPreview() {
   document.getElementById('modalOverlay').classList.add('show');
   // Reset PDF state
   document.getElementById('btnPdfSave').style.display = '';
-  document.getElementById('btnPdfShare').style.display = 'none';
+  document.getElementById('pdfAfterActions').style.display = 'none';
   lastPdfBlob = null;
 }
 function closeModal(e) { if (e.target === e.currentTarget) closeAndResetPdf(); }
 function closeAndResetPdf() {
   document.getElementById('modalOverlay').classList.remove('show');
   document.getElementById('btnPdfSave').style.display = '';
-  document.getElementById('btnPdfShare').style.display = 'none';
+  document.getElementById('pdfAfterActions').style.display = 'none';
   lastPdfBlob = null;
 }
 
@@ -1089,10 +1097,9 @@ async function savePdf() {
 
     toast('PDFを保存しました');
 
-    // Show share button, hide save button
+    // Show action buttons, hide save button
     btn.style.display = 'none';
-    const shareBtn = document.getElementById('btnPdfShare');
-    shareBtn.style.display = '';
+    document.getElementById('pdfAfterActions').style.display = '';
 
   } catch (e) {
     modal.style.maxWidth = origMaxW;
@@ -1117,13 +1124,26 @@ async function sharePdf() {
       if (e.name !== 'AbortError') toast('共有がキャンセルされました');
     }
   } else {
-    // Fallback: re-download
     const url = URL.createObjectURL(lastPdfBlob);
     const a = document.createElement('a');
     a.href = url; a.download = lastPdfFileName; a.click();
     URL.revokeObjectURL(url);
     toast('共有非対応のため再ダウンロードしました');
   }
+}
+
+function shareGmail() {
+  if (!lastPdfBlob) { toast('先にPDFを保存してください'); return; }
+  const name = getVal('userName') || '';
+  const subject = encodeURIComponent(`${name}さん 誕生日会計画書`);
+  const body = encodeURIComponent(`${name}さんの誕生日会計画書をお送りします。\n添付のPDFファイルをご確認ください。\n\n※ダウンロード済みのPDFファイルを添付してください。`);
+  window.open(`https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`, '_blank');
+  toast('Gmailが開きます。保存したPDFを添付してください');
+}
+
+function copyPdfText() {
+  const text = document.getElementById('previewBody').innerText.replace(/^\n+/, '').replace(/\n{3,}/g, '\n\n').trim();
+  navigator.clipboard.writeText(text).then(() => toast('計画書のテキストをコピーしました'));
 }
 function clearAll() {
   if (!confirm('すべての入力をリセットしますか？')) return;
