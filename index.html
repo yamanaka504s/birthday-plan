@@ -499,7 +499,7 @@
           <button class="btn btn-share-item" style="background:#06C755;" onclick="shareTo('line')">LINE</button>
           <button class="btn btn-share-item" style="background:#ea4335;" onclick="shareTo('gmail')">Gmail</button>
           <button class="btn btn-share-item" style="background:#0084FF;" onclick="shareTo('messenger')">Messenger</button>
-          <button class="btn btn-share-item" style="background:#555;" onclick="shareTo('other')">その他</button>
+          <button class="btn btn-share-item" style="background:#FF8C00;" onclick="shareTo('talknote')">Talknote</button>
         </div>
       </div>
       <button class="btn btn-clear" onclick="closeAndResetPdf()">閉じる</button>
@@ -1119,24 +1119,9 @@ async function shareTo(target) {
   const text = `${name}さんの誕生日会計画書`;
   const encodedText = encodeURIComponent(text);
 
-  if (target === 'other') {
-    // Web Share API
-    const file = new File([lastPdfBlob], lastPdfFileName, { type: 'application/pdf' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file], title: lastPdfFileName });
-        toast('共有しました');
-      } catch (e) {
-        if (e.name !== 'AbortError') toast('共有がキャンセルされました');
-      }
-    } else {
-      // PC fallback: re-download
-      const url = URL.createObjectURL(lastPdfBlob);
-      const a = document.createElement('a');
-      a.href = url; a.download = lastPdfFileName; a.click();
-      URL.revokeObjectURL(url);
-      toast('再ダウンロードしました。アプリから共有してください');
-    }
+  if (target === 'talknote') {
+    window.open('https://company.talknote.com/', '_blank');
+    toast('Talknoteが開きます。保存したPDFを添付してください');
   } else if (target === 'line') {
     window.open(`https://line.me/R/share?text=${encodedText}`, '_blank');
     toast('LINEが開きます。保存したPDFを添付してください');
