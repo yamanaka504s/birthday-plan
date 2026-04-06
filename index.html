@@ -1034,25 +1034,26 @@ function closeAndResetPdf() {
 }
 
 async function savePdf() {
-  const el = document.getElementById('previewBody');
   const btn = document.getElementById('btnPdfSave');
   btn.textContent = 'PDF作成中...';
   btn.disabled = true;
 
-  const modal = document.querySelector('.modal');
-  const origMaxW = modal.style.maxWidth;
-  const origW = modal.style.width;
-  modal.style.maxWidth = '800px';
-  modal.style.width = '800px';
+  // オフスクリーンでPDF用のレンダリングを行う（画面に影響を与えない）
+  const offscreen = document.createElement('div');
+  offscreen.style.cssText = 'position:fixed;left:-9999px;top:0;width:760px;background:#fff;z-index:-1;';
+  offscreen.innerHTML = buildDoc();
+  document.body.appendChild(offscreen);
 
   try {
-    const canvas = await html2canvas(el, {
+    // 少し待ってレンダリング完了を確保
+    await new Promise(r => setTimeout(r, 300));
+
+    const canvas = await html2canvas(offscreen, {
       scale: 2, useCORS: true, allowTaint: true,
-      backgroundColor: '#ffffff', width: el.scrollWidth, windowWidth: 800
+      backgroundColor: '#ffffff', width: 760, windowWidth: 760
     });
 
-    modal.style.maxWidth = origMaxW;
-    modal.style.width = origW;
+    document.body.removeChild(offscreen);
 
     const { jsPDF } = window.jspdf;
     const pdfWidth = 210, pdfHeight = 297;
@@ -1086,26 +1087,26 @@ async function savePdf() {
     lastPdfFileName = `${name}さん誕生日会計画書.pdf`;
     lastPdfBlob = pdf.output('blob');
 
-    // Download
-    const url = URL.createObjectURL(lastPdfBlob);
-    const a = document.createElement('a');
-    a.href = url; a.download = lastPdfFileName; a.click();
-    URL.revokeObjectURL(url);
-
-    toast('PDFを保存しました');
-
-    // Show post-save buttons, hide save button
-    btn.style.display = 'none';
     const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
+
     if (isMobile) {
+      // スマホ: ダウンロードせず直接共有ボタンを表示
+      toast('PDFを作成しました');
+      btn.style.display = 'none';
       document.getElementById('btnPdfShare').style.display = '';
     } else {
+      // PC: ダウンロード
+      const url = URL.createObjectURL(lastPdfBlob);
+      const a = document.createElement('a');
+      a.href = url; a.download = lastPdfFileName; a.click();
+      URL.revokeObjectURL(url);
+      toast('PDFを保存しました');
+      btn.style.display = 'none';
       document.getElementById('btnPdfPrint').style.display = '';
     }
 
   } catch (e) {
-    modal.style.maxWidth = origMaxW;
-    modal.style.width = origW;
+    if (offscreen.parentNode) document.body.removeChild(offscreen);
     console.error(e);
     toast('PDF作成に失敗しました');
   } finally {
