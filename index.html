@@ -1116,24 +1116,37 @@ async function savePdf() {
 async function shareTo(target) {
   if (!lastPdfBlob) { toast('先にPDFを保存してください'); return; }
   const name = getVal('userName') || '';
-  const text = `${name}さんの誕生日会計画書`;
-  const encodedText = encodeURIComponent(text);
+  const file = new File([lastPdfBlob], lastPdfFileName, { type: 'application/pdf' });
 
+  // Web Share API でPDFファイルを直接共有（スマホ対応）
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: `${name}さん 誕生日会計画書`,
+        text: `${name}さんの誕生日会計画書`
+      });
+      toast('共有しました');
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+    }
+  }
+
+  // PC等Web Share API非対応の場合のフォールバック
+  const encodedText = encodeURIComponent(`${name}さんの誕生日会計画書`);
   if (target === 'talknote') {
     window.open('https://company.talknote.com/', '_blank');
-    toast('Talknoteが開きます。保存したPDFを添付してください');
   } else if (target === 'line') {
     window.open(`https://line.me/R/share?text=${encodedText}`, '_blank');
-    toast('LINEが開きます。保存したPDFを添付してください');
   } else if (target === 'gmail') {
     const subject = encodeURIComponent(`${name}さん 誕生日会計画書`);
     const body = encodeURIComponent(`${name}さんの誕生日会計画書をお送りします。\n\n※保存したPDFファイルを添付してください。`);
     window.open(`https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`, '_blank');
-    toast('Gmailが開きます。保存したPDFを添付してください');
   } else if (target === 'messenger') {
-    window.open(`https://www.facebook.com/dialog/send?link=${encodeURIComponent(location.href)}&app_id=&redirect_uri=${encodeURIComponent(location.href)}`, '_blank');
-    toast('Messengerが開きます。保存したPDFを添付してください');
+    window.open(`https://www.facebook.com/dialog/send?link=${encodeURIComponent(location.href)}&redirect_uri=${encodeURIComponent(location.href)}`, '_blank');
   }
+  toast('保存したPDFを添付して共有してください');
 }
 function clearAll() {
   if (!confirm('すべての入力をリセットしますか？')) return;
