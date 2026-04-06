@@ -189,7 +189,6 @@
   .modal-actions .btn { flex: 0; min-width: 140px; font-size: .9rem; padding: 10px 20px; }
   .btn-pdf-save { background: linear-gradient(135deg, #e87461, #c45847); color: #fff; flex: 1 !important; min-width: 200px !important; font-size: 1rem !important; padding: 14px 20px !important; }
   .btn-pdf-share { background: linear-gradient(135deg, #34b7f1, #0088cc); color: #fff; flex: 1 !important; min-width: 120px !important; font-size: 1rem !important; padding: 14px 20px !important; }
-  .btn-share-item { color: #fff; flex: 1 !important; min-width: 80px !important; font-size: .95rem !important; padding: 12px 10px !important; border-radius: 10px !important; }
   .modal-actions { flex-wrap: wrap; }
 
   /* Print Doc */
@@ -493,15 +492,7 @@
     <div class="modal-body" id="previewBody"></div>
     <div class="modal-actions no-print">
       <button class="btn btn-pdf-save" id="btnPdfSave" onclick="savePdf()">PDFファイルで保存</button>
-      <div id="pdfAfterActions" style="display:none; width:100%;">
-        <p style="font-weight:700; font-size:.95rem; margin:0 0 10px; color:#333;">PDFを共有する</p>
-        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
-          <button class="btn btn-share-item" style="background:#06C755;" onclick="shareTo('line')">LINE</button>
-          <button class="btn btn-share-item" style="background:#ea4335;" onclick="shareTo('gmail')">Gmail</button>
-          <button class="btn btn-share-item" style="background:#0084FF;" onclick="shareTo('messenger')">Messenger</button>
-          <button class="btn btn-share-item" style="background:#FF8C00;" onclick="shareTo('talknote')">Talknote</button>
-        </div>
-      </div>
+      <button class="btn btn-pdf-share" id="btnPdfShare" onclick="sharePdfFile()" style="display:none;">PDFを共有する</button>
       <button class="btn btn-clear" onclick="closeAndResetPdf()">閉じる</button>
     </div>
   </div>
@@ -1026,14 +1017,14 @@ function showPreview() {
   document.getElementById('modalOverlay').classList.add('show');
   // Reset PDF state
   document.getElementById('btnPdfSave').style.display = '';
-  document.getElementById('pdfAfterActions').style.display = 'none';
+  document.getElementById('btnPdfShare').style.display = 'none';
   lastPdfBlob = null;
 }
 function closeModal(e) { if (e.target === e.currentTarget) closeAndResetPdf(); }
 function closeAndResetPdf() {
   document.getElementById('modalOverlay').classList.remove('show');
   document.getElementById('btnPdfSave').style.display = '';
-  document.getElementById('pdfAfterActions').style.display = 'none';
+  document.getElementById('btnPdfShare').style.display = 'none';
   lastPdfBlob = null;
 }
 
@@ -1098,9 +1089,9 @@ async function savePdf() {
 
     toast('PDFを保存しました');
 
-    // Show action buttons, hide save button
+    // Show share button, hide save button
     btn.style.display = 'none';
-    document.getElementById('pdfAfterActions').style.display = '';
+    document.getElementById('btnPdfShare').style.display = '';
 
   } catch (e) {
     modal.style.maxWidth = origMaxW;
@@ -1113,40 +1104,29 @@ async function savePdf() {
   }
 }
 
-async function shareTo(target) {
+async function sharePdfFile() {
   if (!lastPdfBlob) { toast('先にPDFを保存してください'); return; }
   const name = getVal('userName') || '';
   const file = new File([lastPdfBlob], lastPdfFileName, { type: 'application/pdf' });
 
-  // Web Share API でPDFファイルを直接共有（スマホ対応）
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({
-        files: [file],
-        title: `${name}さん 誕生日会計画書`,
-        text: `${name}さんの誕生日会計画書`
-      });
+  try {
+    if (navigator.share) {
+      await navigator.share({ files: [file] });
       toast('共有しました');
-      return;
-    } catch (e) {
-      if (e.name === 'AbortError') return;
+    } else {
+      // Web Share API非対応（PC等）→ 再ダウ��ロード
+      const url = URL.createObjectURL(lastPdfBlob);
+      const a = document.createElement('a');
+      a.href = url; a.download = lastPdfFileName; a.click();
+      URL.revokeObjectURL(url);
+      toast('PDFをダウンロードしました。ファイルから共有してください');
+    }
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      toast('共有できませんでした');
+      console.error(e);
     }
   }
-
-  // PC等Web Share API非対応の場合のフォールバック
-  const encodedText = encodeURIComponent(`${name}さんの誕生日会計画書`);
-  if (target === 'talknote') {
-    window.open('https://company.talknote.com/', '_blank');
-  } else if (target === 'line') {
-    window.open(`https://line.me/R/share?text=${encodedText}`, '_blank');
-  } else if (target === 'gmail') {
-    const subject = encodeURIComponent(`${name}さん 誕生日会計画書`);
-    const body = encodeURIComponent(`${name}さんの誕生日会計画書をお送りします。\n\n※保存したPDFファイルを添付してください。`);
-    window.open(`https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`, '_blank');
-  } else if (target === 'messenger') {
-    window.open(`https://www.facebook.com/dialog/send?link=${encodeURIComponent(location.href)}&redirect_uri=${encodeURIComponent(location.href)}`, '_blank');
-  }
-  toast('保存したPDFを添付して共有してください');
 }
 function clearAll() {
   if (!confirm('すべての入力をリセットしますか？')) return;
