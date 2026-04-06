@@ -189,6 +189,7 @@
   .modal-actions .btn { flex: 0; min-width: 140px; font-size: .9rem; padding: 10px 20px; }
   .btn-pdf-save { background: linear-gradient(135deg, #e87461, #c45847); color: #fff; flex: 1 !important; min-width: 200px !important; font-size: 1rem !important; padding: 14px 20px !important; }
   .btn-pdf-share { background: linear-gradient(135deg, #34b7f1, #0088cc); color: #fff; flex: 1 !important; min-width: 120px !important; font-size: 1rem !important; padding: 14px 20px !important; }
+  .btn-pdf-talknote { background: linear-gradient(135deg, #FF8C00, #e07800); color: #fff; flex: 1 !important; min-width: 120px !important; font-size: 1rem !important; padding: 14px 20px !important; }
   .modal-actions { flex-wrap: wrap; }
 
   /* Print Doc */
@@ -492,6 +493,8 @@
     <div class="modal-body" id="previewBody"></div>
     <div class="modal-actions no-print">
       <button class="btn btn-pdf-save" id="btnPdfSave" onclick="savePdf()">PDFファイルで保存</button>
+      <button class="btn btn-pdf-share" id="btnPdfPrint" onclick="window.print()" style="display:none;">PDFを印刷する</button>
+      <button class="btn btn-pdf-talknote" id="btnPdfTalknote" onclick="openTalknote()" style="display:none;">Talknoteに共有する</button>
       <button class="btn btn-pdf-share" id="btnPdfShare" onclick="sharePdfFile()" style="display:none;">PDFを共有する</button>
       <button class="btn btn-clear" onclick="closeAndResetPdf()">閉じる</button>
     </div>
@@ -1012,20 +1015,22 @@ function buildDoc() {
 let lastPdfBlob = null;
 let lastPdfFileName = '';
 
+function resetPdfButtons() {
+  document.getElementById('btnPdfSave').style.display = '';
+  document.getElementById('btnPdfPrint').style.display = 'none';
+  document.getElementById('btnPdfTalknote').style.display = 'none';
+  document.getElementById('btnPdfShare').style.display = 'none';
+  lastPdfBlob = null;
+}
 function showPreview() {
   document.getElementById('previewBody').innerHTML = buildDoc();
   document.getElementById('modalOverlay').classList.add('show');
-  // Reset PDF state
-  document.getElementById('btnPdfSave').style.display = '';
-  document.getElementById('btnPdfShare').style.display = 'none';
-  lastPdfBlob = null;
+  resetPdfButtons();
 }
 function closeModal(e) { if (e.target === e.currentTarget) closeAndResetPdf(); }
 function closeAndResetPdf() {
   document.getElementById('modalOverlay').classList.remove('show');
-  document.getElementById('btnPdfSave').style.display = '';
-  document.getElementById('btnPdfShare').style.display = 'none';
-  lastPdfBlob = null;
+  resetPdfButtons();
 }
 
 async function savePdf() {
@@ -1089,9 +1094,15 @@ async function savePdf() {
 
     toast('PDFを保存しました');
 
-    // Show share button, hide save button
+    // Show post-save buttons, hide save button
     btn.style.display = 'none';
-    document.getElementById('btnPdfShare').style.display = '';
+    const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+      document.getElementById('btnPdfShare').style.display = '';
+    } else {
+      document.getElementById('btnPdfPrint').style.display = '';
+      document.getElementById('btnPdfTalknote').style.display = '';
+    }
 
   } catch (e) {
     modal.style.maxWidth = origMaxW;
@@ -1102,6 +1113,11 @@ async function savePdf() {
     btn.textContent = 'PDFファイルで保存';
     btn.disabled = false;
   }
+}
+
+function openTalknote() {
+  window.open('https://company.talknote.com/', '_blank');
+  toast('Talknoteが開きます。保存したPDFを添付してください');
 }
 
 async function sharePdfFile() {
