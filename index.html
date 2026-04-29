@@ -401,7 +401,7 @@
     </div>
 
     <div class="ai-field" id="field_goal">
-      <label>誕生日会のゴールのイメージ（理想の状況） <span style="font-weight:400;font-size:.75rem;color:var(--text-light);">※業務プログラミング作成時のものをコピペでもOK</span></label>
+      <label>誕生日会のゴールのイメージ（理想の結果） <span style="font-weight:400;font-size:.75rem;color:var(--text-light);">※業務プログラミング作成時のものをコピペでもOK</span></label>
       <textarea id="draft_goal" placeholder="例：太郎さんが笑顔で過ごせること。家族との良い思い出作り。"></textarea>
       <div class="ai-btn-row">
         <button class="btn-ai" onclick="refineField('goal')"><span class="spinner" id="spin_goal"></span>AIで洗練</button>
@@ -641,7 +641,7 @@ function toast(msg) {
 const LABELS = {
   schedule: '当日の流れ',
   reason: 'この企画にした理由',
-  goal: '誕生日会のゴールのイメージ（理想の状況）',
+  goal: '誕生日会のゴールのイメージ（理想の結果）',
   caution: '注意すべき点とその対処方法'
 };
 
@@ -887,7 +887,7 @@ function gatherAllContext() {
 【当日の流れ】${schedule}
 【ACPにて推定されているゴール】${acpGoal}
 【この企画にした理由】${reason}
-【誕生日会のゴールのイメージ（理想の状況）】${goal}
+【誕生日会のゴールのイメージ（理想の結果）】${goal}
 【注意すべき点】${caution}`;
 }
 
@@ -988,7 +988,7 @@ function buildDoc() {
   const aiText = (key) => {
     let t = cleanMarkdown(aiResults[key] || getVal('draft_' + key)) || '（未記入）';
     // Remove heading lines that duplicate section titles
-    const headingLabels = ['当日の流れ','この企画にした理由','ゴールのイメージ','誕生日会のゴールのイメージ','理想の状況','ACPにて推定されているゴール','注意すべき点','対処方法','注意事項','利用者名'];
+    const headingLabels = ['当日の流れ','この企画にした理由','ゴールのイメージ','誕生日会のゴールのイメージ','理想の結果','ACPにて推定されているゴール','注意すべき点','対処方法','注意事項','利用者名'];
     t = t.replace(/^.*$/gm, function(line) {
       const trimmed = line.replace(/[\s【】■▼▶●☆★〇◆◇「」：:]/g, '');
       for (const l of headingLabels) {
@@ -1024,7 +1024,7 @@ function buildDoc() {
   <div class="text-block">${escapeHtml(getVal('acpGoal') || '（未定）')}</div>
   <div class="section-heading">この企画にした理由 ※上記ゴールと関連させて</div>
   <div class="text-block">${escapeHtml(aiText('reason'))}</div>
-  <div class="section-heading">誕生日会のゴールのイメージ（理想の状況）</div>
+  <div class="section-heading">誕生日会のゴールのイメージ（理想の結果）</div>
   <div class="text-block">${escapeHtml(aiText('goal'))}</div>
   <div class="section-heading">注意すべき点とその対処方法</div>
   <div class="text-block">${escapeHtml(aiText('caution'))}</div>
