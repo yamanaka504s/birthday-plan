@@ -376,8 +376,14 @@
       </div>
     </div>
 
+    <!-- ACPにて推定されているゴール（AI洗練なし・任意入力） -->
+    <div class="ai-field" id="field_acpGoal">
+      <label>ACPにて推定されているゴール <span style="font-weight:400;font-size:.75rem;color:var(--text-light);">※未定なら記入なし</span></label>
+      <textarea id="acpGoal" rows="2" placeholder="例：自宅で過ごす時間を大切にしながら、家族と穏やかな時間を過ごしたい。"></textarea>
+    </div>
+
     <div class="ai-field" id="field_reason">
-      <label>この企画にした理由</label>
+      <label>この企画にした理由 <span style="font-weight:400;font-size:.75rem;color:var(--text-light);">※上記ゴールと関連させて</span></label>
       <textarea id="draft_reason" placeholder="例：太郎さんはカラオケが好き。家族と一緒に歌えるような誕生日会にしたい。"></textarea>
       <div class="ai-btn-row">
         <button class="btn-ai" onclick="refineField('reason')"><span class="spinner" id="spin_reason"></span>AIで洗練</button>
@@ -395,7 +401,7 @@
     </div>
 
     <div class="ai-field" id="field_goal">
-      <label>ゴールのイメージ <span style="font-weight:400;font-size:.75rem;color:var(--text-light);">※業務プログラミング作成時のものをコピペでもOK</span></label>
+      <label>誕生日会のゴールのイメージ（理想の状況） <span style="font-weight:400;font-size:.75rem;color:var(--text-light);">※業務プログラミング作成時のものをコピペでもOK</span></label>
       <textarea id="draft_goal" placeholder="例：太郎さんが笑顔で過ごせること。家族との良い思い出作り。"></textarea>
       <div class="ai-btn-row">
         <button class="btn-ai" onclick="refineField('goal')"><span class="spinner" id="spin_goal"></span>AIで洗練</button>
@@ -548,6 +554,7 @@ function autoResize(ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollH
 const FIELDS = [
   'planner','userName','eventDate','eventHour','eventMin','venue','family','staff','cost',
   'videographer','items','transport','snsOk',
+  'acpGoal',
   'draft_schedule','draft_reason','draft_goal','draft_caution'
 ];
 const AI_KEYS = ['schedule','reason','goal','caution'];
@@ -634,14 +641,14 @@ function toast(msg) {
 const LABELS = {
   schedule: '当日の流れ',
   reason: 'この企画にした理由',
-  goal: 'ゴールのイメージ',
+  goal: '誕生日会のゴールのイメージ（理想の状況）',
   caution: '注意すべき点とその対処方法'
 };
 
 const PROMPTS = {
   schedule: `下書きを時刻付き箇条書きに整えて。まず自分が適切だと思う文章を考え、その3分の1の量に圧縮して出力すること。きれいな言葉選びをしつつ、短くシンプルなほど優れた文章。似た文脈の言葉は重複して使わない。1項目1行。内容の追加禁止。Markdown禁止、箇条書きは「・」、見出し不要。`,
 
-  reason: `下書きを整えて。まず自分が適切だと思う文章を考え、その3分の1の量に圧縮して出力すること。きれいな言葉選びをしつつ、短くシンプルなほど優れた文章。似た文脈の言葉は重複して使わない。内容の追加禁止。Markdown禁止、箇条書きは「・」、見出し不要。`,
+  reason: `下書きを整えて。【ACPにて推定されているゴール】が提示されている場合は、その大きなゴールと今回の誕生日会の企画意図が自然につながるように関連づけて表現すること（無理にこじつけない）。まず自分が適切だと思う文章を考え、その3分の1の量に圧縮して出力すること。きれいな言葉選びをしつつ、短くシンプルなほど優れた文章。似た文脈の言葉は重複して使わない。内容の追加禁止。Markdown禁止、箇条書きは「・」、見出し不要。`,
 
   goal: `下書きを整えて。ゴールとは誕生日会の結果の理想の状態のみを書く。担当者の行動や計画は含めない。まず自分が適切だと思う文章を考え、その3分の1の量に圧縮して出力すること。きれいな言葉選びをしつつ、短くシンプルなほど優れた文章。似た文脈の言葉は重複して使わない。内容の追加禁止。Markdown禁止、箇条書きは「・」、見出し不要。`,
 
@@ -691,7 +698,11 @@ async function refineField(key) {
   localStorage.setItem('bd_orig_' + key, draft);
 
   const userName = document.getElementById('userName').value.trim();
-  const context = userName ? `\n\n【利用者名】${userName}` : '';
+  const acpGoal = (document.getElementById('acpGoal') || {}).value || '';
+  let context = userName ? `\n\n【利用者名】${userName}` : '';
+  if (key === 'reason' && acpGoal.trim()) {
+    context += `\n【ACPにて推定されているゴール】${acpGoal.trim()}`;
+  }
 
   setLoading(key, true);
   try {
@@ -714,7 +725,11 @@ async function retryField(key, mode) {
   if (!currentResult) return;
   const draft = originalDrafts[key] || document.getElementById('draft_' + key).value;
   const userName = document.getElementById('userName').value.trim();
-  const context = userName ? `\n\n【利用者名】${userName}` : '';
+  const acpGoal = (document.getElementById('acpGoal') || {}).value || '';
+  let context = userName ? `\n\n【利用者名】${userName}` : '';
+  if (key === 'reason' && acpGoal.trim()) {
+    context += `\n【ACPにて推定されているゴール】${acpGoal.trim()}`;
+  }
 
   setLoading(key, true);
   try {
@@ -861,6 +876,7 @@ function gatherAllContext() {
   const name = getVal('userName') || '';
   const venue = getVal('venue') || '';
   const family = getVal('family') || '';
+  const acpGoal = getVal('acpGoal') || '';
   const schedule = cleanMarkdown(aiResults['schedule'] || getVal('draft_schedule')) || '';
   const reason = cleanMarkdown(aiResults['reason'] || getVal('draft_reason')) || '';
   const goal = cleanMarkdown(aiResults['goal'] || getVal('draft_goal')) || '';
@@ -869,8 +885,9 @@ function gatherAllContext() {
 【場所】${venue}
 【参加家族】${family}
 【当日の流れ】${schedule}
+【ACPにて推定されているゴール】${acpGoal}
 【この企画にした理由】${reason}
-【ゴールのイメージ】${goal}
+【誕生日会のゴールのイメージ（理想の状況）】${goal}
 【注意すべき点】${caution}`;
 }
 
@@ -971,7 +988,7 @@ function buildDoc() {
   const aiText = (key) => {
     let t = cleanMarkdown(aiResults[key] || getVal('draft_' + key)) || '（未記入）';
     // Remove heading lines that duplicate section titles
-    const headingLabels = ['当日の流れ','この企画にした理由','ゴールのイメージ','注意すべき点','対処方法','注意事項','利用者名'];
+    const headingLabels = ['当日の流れ','この企画にした理由','ゴールのイメージ','誕生日会のゴールのイメージ','理想の状況','ACPにて推定されているゴール','注意すべき点','対処方法','注意事項','利用者名'];
     t = t.replace(/^.*$/gm, function(line) {
       const trimmed = line.replace(/[\s【】■▼▶●☆★〇◆◇「」：:]/g, '');
       for (const l of headingLabels) {
@@ -1003,9 +1020,11 @@ function buildDoc() {
   </table>
   <div class="section-heading">当日の流れ</div>
   <div class="text-block">${escapeHtml(aiText('schedule'))}</div>
-  <div class="section-heading">この企画にした理由</div>
+  <div class="section-heading">ACPにて推定されているゴール</div>
+  <div class="text-block">${escapeHtml(getVal('acpGoal') || '（未定）')}</div>
+  <div class="section-heading">この企画にした理由 ※上記ゴールと関連させて</div>
   <div class="text-block">${escapeHtml(aiText('reason'))}</div>
-  <div class="section-heading">ゴールのイメージ</div>
+  <div class="section-heading">誕生日会のゴールのイメージ（理想の状況）</div>
   <div class="text-block">${escapeHtml(aiText('goal'))}</div>
   <div class="section-heading">注意すべき点とその対処方法</div>
   <div class="text-block">${escapeHtml(aiText('caution'))}</div>
